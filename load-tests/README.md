@@ -22,7 +22,8 @@ load-tests/
     ├── stress.js      # ramp to 500 RPS — find degradation point
     ├── spike.js       # surge to 1500 RPS then recover — viral-link sim
     ├── soak.js        # 150 RPS for 30m+ — leaks / pool exhaustion
-    └── capacity.js    # ramp to 1000 RPS — full SLO / capacity test
+    ├── capacity.js    # ramp to 1000 RPS — find the per-instance ceiling
+    └── target.js      # 10,000 read + 1,000 write RPS — the production SLO target
 ```
 
 `lib/` is the single source of truth; the files in `scenarios/` are thin
@@ -38,10 +39,44 @@ wrappers that only set the executor + rate and reuse the shared model.
 | `stress` | `ramping-arrival-rate` | open | →500 RPS | Find where latency starts to degrade. |
 | `spike` | `ramping-arrival-rate` | open | 100→1500→100 RPS | Sudden surge + recovery (cache/DB resilience). |
 | `soak` | `constant-arrival-rate` | open | 150 RPS / 30m | Long run to surface leaks and resource exhaustion. |
-| `capacity` | `ramping-arrival-rate` | open | →1000 RPS | Full per-instance capacity / SLO test. |
+| `capacity` | `ramping-arrival-rate` | open | →1000 RPS | Find the per-instance throughput ceiling. |
+| `target` | `ramping-arrival-rate` ×2 | open | 10,000 read + 1,000 write RPS | Verify the service holds the **production SLO target** (see below). |
 
 Open-model scenarios make **one HTTP request per iteration**, so the configured
 arrival `rate` (iterations/sec) ≈ **requests/sec (RPS)**.
+
+## Target load (the SLO this service is sized for)
+
+The service is sized for a sustained production load of:
+
+| Traffic | Target throughput |
+| --- | --- |
+| **Reads** (`GET /expand/{id}` redirects) | **10,000 RPS** |
+| **Writes** (`POST /shorten`) | **1,000 RPS** |
+
+That's a **10:1 read:write ratio** — still read-heavy, as expected for a URL
+shortener (links are resolved more often than they're created). The `target`
+scenario reproduces it exactly: reads and writes run as **two independent
+open-model executors at the same time**, each with its own arrival rate, rather
+than as one weighted mix. This way the read and write rates are set explicitly
+and can be tuned independently via `READ_RPS` / `WRITE_RPS`.
+
+```bash
+# Validate the service against the target SLO (defaults: 10k read + 1k write RPS)
+k6 run load-tests/scenarios/target.js
+
+# Same shape at half load, held for 15m, against staging
+k6 run -e READ_RPS=5000 -e WRITE_RPS=500 -e DURATION=15m \
+  -e BASE_URL=https://staging.example.com load-tests/scenarios/target.js
+```
+
+The same SLO latency/error thresholds (below) apply, so a clean exit means the
+instance held 10k read + 1k write RPS within SLO. A latency-threshold breach or
+`dropped_iterations` in the summary means it could not.
+
+> 10k RPS is a real load: the k6 host (and its file-descriptor / ephemeral-port
+> limits) must be able to generate it, and an HTTP keep-alive–friendly setup
+> helps. Run it from a dedicated load box, not the same machine as the service.
 
 ## Traffic model (open-model scenarios)
 
@@ -114,6 +149,9 @@ k6 run load-tests/scenarios/baseline.js
 k6 run load-tests/scenarios/stress.js
 k6 run load-tests/scenarios/capacity.js
 
+# Production SLO target: 10,000 read + 1,000 write RPS
+k6 run load-tests/scenarios/target.js
+
 # Resilience
 k6 run load-tests/scenarios/spike.js
 k6 run load-tests/scenarios/soak.js
@@ -142,7 +180,10 @@ All overridable with `-e KEY=value`:
 | `RATE` | `100` / `150` | baseline / soak | Constant arrival rate (RPS). |
 | `PEAK` | `500` / `1000` / `1500` | stress / capacity / spike | Peak arrival rate (RPS). |
 | `BASELINE` | `100` | spike | Steady rate around the spike. |
-| `DURATION` | scenario-specific | smoke / baseline / soak | Run duration. |
+| `READ_RPS` | `10000` | target | Sustained read (redirect) rate. |
+| `WRITE_RPS` | `1000` | target | Sustained write (shorten) rate. |
+| `WARMUP` | `1m` | target | Ramp-up time before holding at target. |
+| `DURATION` | scenario-specific | smoke / baseline / soak / target | Run duration (hold time for `target`). |
 
 ```bash
 # Example: capacity test to 2000 RPS against staging with a smaller seed set
@@ -158,7 +199,8 @@ k6 run -e BASE_URL=https://staging.example.com -e PEAK=2000 -e INITIAL_URL_COUNT
 1. `smoke` — gate correctness (fast, in CI on every change).
 2. `baseline` — record the steady-state numbers; diff future runs against it.
 3. `stress` → `capacity` — find the degradation point and per-instance ceiling.
-4. `spike` / `soak` — resilience and stability before a release.
+4. `target` — confirm the instance holds the production SLO (10k read + 1k write RPS).
+5. `spike` / `soak` — resilience and stability before a release.
 
 Watch the app's Grafana dashboard during runs — `http.server.requests` latency
 and error rate, JVM heap/GC, and the HikariCP pool metrics — to correlate k6's

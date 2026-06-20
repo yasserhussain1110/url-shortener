@@ -64,12 +64,15 @@ export function seedUrls() {
 }
 
 // ---------------------------------------------------------------------------
-// Per-iteration traffic. One request per iteration.
+// Actions: one HTTP request + its assertions + custom metrics, with NO
+// think-time. Exported so throughput-oriented scenarios (e.g. the RPS target)
+// can drive them directly, where the arrival-rate executor — not sleep —
+// controls the rate and per-iteration sleep would only inflate VU needs.
 // ---------------------------------------------------------------------------
-function doRedirect(pool) {
+export function redirectAction(pool) {
   const shortUrl = pickWeightedUrl(pool);
   if (!shortUrl) {
-    return;
+    return null;
   }
 
   const res = api.expand(shortUrl, 'redirect');
@@ -84,10 +87,10 @@ function doRedirect(pool) {
     redirectFailures.add(1);
   }
 
-  sleep(jitter(0.5));
+  return res;
 }
 
-function doCreate() {
+export function createAction() {
   const res = api.createShortUrl(undefined, 'shorten');
 
   // A new URL and a duplicate both return 200 (the service returns the existing
@@ -102,10 +105,10 @@ function doCreate() {
     createFailures.add(1);
   }
 
-  sleep(jitter(1));
+  return res;
 }
 
-function doError() {
+export function errorAction() {
   errorRequests.add(1);
 
   if (Math.random() < errorMix.notFoundShare) {
@@ -117,19 +120,24 @@ function doError() {
       'bad_request: status 400': (r) => r.status === 400,
     });
   }
-
-  sleep(jitter(1));
 }
 
+// ---------------------------------------------------------------------------
+// Mixed per-iteration traffic with human-like think-time. One request per
+// iteration. Used by baseline / stress / spike / soak / capacity.
+// ---------------------------------------------------------------------------
 export function runTraffic(data) {
   const pool = data.redirectPool;
   const r = Math.random();
 
   if (r < mix.redirect) {
-    doRedirect(pool);
+    redirectAction(pool);
+    sleep(jitter(0.5));
   } else if (r < mix.redirect + mix.create) {
-    doCreate();
+    createAction();
+    sleep(jitter(1));
   } else {
-    doError();
+    errorAction();
+    sleep(jitter(1));
   }
 }
