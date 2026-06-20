@@ -2,6 +2,7 @@ package com.hussain.urlshortener.controller;
 
 import com.hussain.urlshortener.model.Url;
 import com.hussain.urlshortener.service.UrlService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,7 +36,7 @@ public class UrlController {
     }
 
     @PostMapping(path="/shorten")
-    public Url shorten(@RequestBody Url url) {
+    public Url shorten(@RequestBody @Valid Url url) {
         return urlService.shorten(url);
     }
 
