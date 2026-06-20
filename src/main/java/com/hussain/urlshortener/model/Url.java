@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
+import org.hibernate.validator.constraints.URL;
 
 @Table(name = "urls")
 @Entity
@@ -13,6 +14,8 @@ import lombok.Data;
 public class Url {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    String originalUrl;
+    private Long id;
+
+    @URL
+    private String originalUrl;
 }
