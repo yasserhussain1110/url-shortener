@@ -95,9 +95,11 @@ export function createAction() {
 
   // A new URL and a duplicate both return 200 (the service returns the existing
   // row for a duplicate rather than erroring), so 200 is the only success here.
+  // Guard the JSON read behind the status check: a timed-out/reset request has a
+  // null body, and calling r.json() on it throws instead of failing the check.
   const ok = check(res, {
     'shorten: status 200': (r) => r.status === 200,
-    'shorten: returns id': (r) => r.json('id') !== undefined,
+    'shorten: returns id': (r) => r.status === 200 && !!r.body && r.json('id') !== undefined,
   });
 
   createSuccessRate.add(ok);
