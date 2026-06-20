@@ -17,7 +17,7 @@
 //     -e BASE_URL=http://host:9000 load-tests/scenarios/target.js
 
 import { seedUrls, redirectAction, createAction } from '../lib/workload.js';
-import { thresholds, envInt, envStr, vuPoolFor } from '../lib/config.js';
+import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';
 
 const READ_RPS = envInt('READ_RPS', 10000);
 const WRITE_RPS = envInt('WRITE_RPS', 1000);
@@ -52,6 +52,7 @@ export const options = {
     },
   },
   thresholds,
+  setupTimeout,
 };
 
 export const setup = seedUrls;

@@ -6,7 +6,7 @@
 //   k6 run -e RATE=150 -e DURATION=2h -e BASE_URL=http://host:9000 load-tests/scenarios/soak.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
-import { thresholds, envInt, envStr, vuPoolFor } from '../lib/config.js';
+import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';
 
 const RATE = envInt('RATE', 150);
 
@@ -21,6 +21,7 @@ export const options = {
     },
   },
   thresholds,
+  setupTimeout,
 };
 
 export const setup = seedUrls;

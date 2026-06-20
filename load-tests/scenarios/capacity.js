@@ -9,7 +9,7 @@
 //   k6 run -e PEAK=1000 -e BASE_URL=http://host:9000 load-tests/scenarios/capacity.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
-import { thresholds, envInt, vuPoolFor } from '../lib/config.js';
+import { thresholds, setupTimeout, envInt, vuPoolFor } from '../lib/config.js';
 
 const PEAK = envInt('PEAK', 1000);
 
@@ -29,6 +29,7 @@ export const options = {
     },
   },
   thresholds,
+  setupTimeout,
 };
 
 export const setup = seedUrls;

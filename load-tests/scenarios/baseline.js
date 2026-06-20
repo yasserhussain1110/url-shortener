@@ -7,7 +7,7 @@
 //   k6 run -e RATE=200 -e DURATION=10m -e BASE_URL=http://host:9000 load-tests/scenarios/baseline.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
-import { thresholds, envInt, envStr, vuPoolFor } from '../lib/config.js';
+import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';
 
 const RATE = envInt('RATE', 100);
 
@@ -22,6 +22,7 @@ export const options = {
     },
   },
   thresholds,
+  setupTimeout,
 };
 
 export const setup = seedUrls;

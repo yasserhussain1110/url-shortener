@@ -22,6 +22,11 @@ export function envStr(name, def) {
 // Target service.
 export const BASE_URL = envStr('BASE_URL', 'http://localhost:9000');
 
+// Max time allowed for setup() to seed the dataset. Seeding is serial (one POST
+// per URL), so the default 5000-URL pool takes ~1-2 min — well past k6's default
+// setupTimeout of 60s. Bump this (or lower INITIAL_URL_COUNT) for big seeds.
+export const setupTimeout = envStr('SETUP_TIMEOUT', '300s');
+
 // Seeded dataset + access pattern (Zipf-like hot/cold skew).
 export const dataset = {
   // Number of short URLs created once in setup() and reused (read-heavy model).

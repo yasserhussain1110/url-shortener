@@ -6,7 +6,7 @@
 //   k6 run -e BASELINE=100 -e PEAK=1500 -e BASE_URL=http://host:9000 load-tests/scenarios/spike.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
-import { thresholds, envInt, vuPoolFor } from '../lib/config.js';
+import { thresholds, setupTimeout, envInt, vuPoolFor } from '../lib/config.js';
 
 const BASELINE = envInt('BASELINE', 100);
 const PEAK = envInt('PEAK', 1500);
@@ -31,6 +31,7 @@ export const options = {
   // Latency is expected to breach briefly at the spike; thresholds still flag
   // failure to recover. Keep gating on the read path's failure rate.
   thresholds,
+  setupTimeout,
 };
 
 export const setup = seedUrls;

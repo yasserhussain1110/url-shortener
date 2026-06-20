@@ -186,6 +186,7 @@ All overridable with `-e KEY=value`:
 | `WRITE_RPS` | `1000` | target | Sustained write (shorten) rate. |
 | `WARMUP` | `1m` | target | Ramp-up time before holding at target. |
 | `DURATION` | scenario-specific | smoke / baseline / soak / target | Run duration (hold time for `target`). |
+| `SETUP_TIMEOUT` | `300s` | open-model | Max time for `setup()` to seed the pool. Raise it for big `INITIAL_URL_COUNT`. |
 
 ```bash
 # Example: capacity test to 2000 RPS against staging with a smaller seed set
@@ -194,7 +195,10 @@ k6 run -e BASE_URL=https://staging.example.com -e PEAK=2000 -e INITIAL_URL_COUNT
 ```
 
 > Seed URLs are created serially in `setup()` before the run starts, so a large
-> `INITIAL_URL_COUNT` adds warm-up time.
+> `INITIAL_URL_COUNT` adds warm-up time. The default 5000-URL pool takes ~1-2 min,
+> which is why seeding scenarios set `setupTimeout` (default `300s`, override with
+> `SETUP_TIMEOUT`). If you bump `INITIAL_URL_COUNT` a lot, raise `SETUP_TIMEOUT`
+> too, or lower the count for quick local runs (e.g. `-e INITIAL_URL_COUNT=500`).
 
 ## Suggested workflow
 
