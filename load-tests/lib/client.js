@@ -13,7 +13,7 @@
 //   GET  /expand/{id}  (id binds as Long)      -> 302 Location: <original_url>
 //                                                 unknown numeric id            -> 404
 //                                                 non-numeric id                -> 400
-//   GET  /error/{code} (code binds as int)     -> responds with that status (deliberate 5xx)
+//   GET  /fault/{code} (code binds as int)     -> responds with that status (deliberate 5xx)
 //
 // Jackson is configured with SNAKE_CASE (application.properties), so the JSON
 // keys on the wire are snake_case: `original_url`, `id`.
@@ -60,12 +60,12 @@ export function expandMissing(endpoint = 'not_found') {
   });
 }
 
-// /error/{code} echoes the numeric status code back, so these all yield 5xx.
+// /fault/{code} echoes the numeric status code back, so these all yield 5xx.
 // (A non-numeric code like "throw" would fail int binding and return 400.)
 const ERROR_CODES = ['500', '502', '503'];
 
 // Hit one of the deliberate 5xx endpoints.
 export function triggerServerError(endpoint = 'server_error') {
   const code = ERROR_CODES[Math.floor(Math.random() * ERROR_CODES.length)];
-  return http.get(`${BASE_URL}/error/${code}`, { tags: { endpoint } });
+  return http.get(`${BASE_URL}/fault/${code}`, { tags: { endpoint } });
 }

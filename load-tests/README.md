@@ -109,9 +109,11 @@ These were verified against the Spring Boot controllers (`UrlController`,
   not 404 — so the 404 path uses a large **numeric** id that won't exist
   (`lib/client.js#expandMissing`).
 - `POST /shorten` with a malformed JSON body returns **400**.
-- Deliberate 5xx come from `GET /error/{code}`, which echoes the numeric status
+- Deliberate 5xx come from `GET /fault/{code}`, which echoes the numeric status
   code. The suite uses `500` / `502` / `503`. Note a non-numeric code (e.g.
-  `throw`) fails `int` binding and returns **400**, not a 5xx.
+  `throw`) fails `int` binding and returns **400**, not a 5xx. (This lives on
+  `/fault`, not `/error`, to avoid colliding with Spring Boot's reserved
+  `/error` dispatch path.)
 
 ## SLO thresholds
 
