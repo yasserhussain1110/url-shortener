@@ -33,7 +33,7 @@ wrappers that only set the executor + rate and reuse the shared model.
 | Scenario | Executor | Model | Default load | Purpose |
 | --- | --- | --- | --- | --- |
 | `smoke` | `constant-vus` | closed | 1 VU / 30s | Fast correctness gate; aborts on first regression. |
-| `functional` | `ramping-vus` | closed | →50 VUs | Exercise every path (200/409/404/400/5xx) under light concurrency. |
+| `functional` | `ramping-vus` | closed | →50 VUs | Exercise every path (302/200/404/400/5xx) under light concurrency. |
 | `baseline` | `constant-arrival-rate` | open | 100 RPS / 5m | Stable steady state to diff against for regressions. |
 | `stress` | `ramping-arrival-rate` | open | →500 RPS | Find where latency starts to degrade. |
 | `spike` | `ramping-arrival-rate` | open | 100→1500→100 RPS | Sudden surge + recovery (cache/DB resilience). |
@@ -57,13 +57,26 @@ arrival `rate` (iterations/sec) ≈ **requests/sec (RPS)**.
 
 ## Contract notes (matched to the actual app)
 
-These were verified against `conf/routes` + the controllers:
+These were verified against the Spring Boot controllers (`UrlController`,
+`ErrorController`) and `application.properties`:
 
-- `GET /expand/:id` binds `id` as a **`Long`**. A non-numeric id returns **400**,
+- **Snake-case JSON.** Jackson is configured with `SNAKE_CASE`, so the wire
+  format is `{"original_url": "..."}` on the request and
+  `{"id": <Long>, "original_url": "..."}` on the response. The short link is
+  just `/expand/{id}` built from the returned `id`.
+- `POST /shorten` returns **200** for both a new URL and a duplicate — a
+  duplicate returns the existing row, so there is **no 409**.
+- `GET /expand/{id}` returns a **302** with the original URL in the `Location`
+  header (not a `200` with a JSON body). The client disables redirect-following
+  (`redirects: 0`) so it measures/asserts the 302 itself instead of chasing it
+  out to the external target.
+- `GET /expand/{id}` binds `id` as a **`Long`**. A non-numeric id returns **400**,
   not 404 — so the 404 path uses a large **numeric** id that won't exist
   (`lib/client.js#expandMissing`).
 - `POST /shorten` with a malformed JSON body returns **400**.
-- Deliberate 5xx come from `GET /error/{500,throw,502,503}`.
+- Deliberate 5xx come from `GET /error/{code}`, which echoes the numeric status
+  code. The suite uses `500` / `502` / `503`. Note a non-numeric code (e.g.
+  `throw`) fails `int` binding and returns **400**, not a 5xx.
 
 ## SLO thresholds
 
@@ -76,8 +89,8 @@ Defined in `lib/config.js`. Two deliberate design choices:
 
 | Threshold | Gate |
 | --- | --- |
-| `http_req_failed{endpoint:redirect}` | `rate < 0.01` |
-| `http_req_failed{endpoint:shorten}` | `rate < 0.02` (allows rare 409) |
+| `http_req_failed{endpoint:redirect}` | `rate < 0.01` (302 isn't counted as a failure) |
+| `http_req_failed{endpoint:shorten}` | `rate < 0.02` |
 | `http_req_duration{endpoint:redirect}` | `p95 < 100ms`, `p99 < 200ms` |
 | `http_req_duration{endpoint:shorten}` | `p95 < 300ms` |
 | `checks` | `rate > 0.99` |

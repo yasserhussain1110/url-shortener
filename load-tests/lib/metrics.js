@@ -6,7 +6,7 @@ import { Counter, Rate } from 'k6/metrics';
 // Availability of the read path (status 200 on a known-good short URL).
 export const redirectSuccessRate = new Rate('redirect_success_rate');
 
-// Availability of the write path (status 200/409 on /shorten).
+// Availability of the write path (status 200 on /shorten).
 export const createSuccessRate = new Rate('create_success_rate');
 
 // Raw failure counters for quick triage in the summary.

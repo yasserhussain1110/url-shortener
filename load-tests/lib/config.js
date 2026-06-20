@@ -51,6 +51,8 @@ export const errorMix = {
 //  - Failures are gated PER success-endpoint (tagged), not globally. The model
 //    sends deliberate 4xx/5xx error traffic which k6 counts as http_req_failed,
 //    so a global `http_req_failed<0.01` would breach by design.
+//  - A 302 (the redirect happy path) is NOT counted as a failure by k6
+//    (only status >= 400 is), so the redirect gate stays clean.
 //  - Latency is asserted via http_req_duration thresholds (not via check()), so
 //    the `checks` rate stays a pure correctness signal.
 export const thresholds = {
@@ -58,7 +60,8 @@ export const thresholds = {
   'http_req_failed{endpoint:redirect}': ['rate<0.01'],
   'http_req_duration{endpoint:redirect}': ['p(95)<100', 'p(99)<200'],
 
-  // Write path — allow a little slack for rare duplicate (409) responses.
+  // Write path. Duplicates return the existing row (200), so writes shouldn't
+  // error at all; a small slack absorbs transient blips under load.
   'http_req_failed{endpoint:shorten}': ['rate<0.02'],
   'http_req_duration{endpoint:shorten}': ['p(95)<300'],
 

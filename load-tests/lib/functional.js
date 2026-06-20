@@ -3,6 +3,9 @@
 //   - scenarios/smoke.js     (1 VU, short, CI gate)
 //   - scenarios/functional.js (VU ramp, dev sanity under light concurrency)
 //
+// Paths covered: 302 (redirect), 200 (shorten), 404 (unknown id),
+// 400 (malformed body), 5xx (deliberate error endpoint).
+//
 // This is correctness-focused, not throughput-focused. It deliberately hits
 // 4xx/5xx endpoints, so http_req_failed is gated only on the success endpoints.
 
@@ -24,18 +27,18 @@ export function runFunctional() {
     const res = api.createShortUrl(url, 'shorten');
 
     check(res, {
-      'shorten: status 200 or 409': (r) => r.status === 200 || r.status === 409,
+      'shorten: status 200': (r) => r.status === 200,
     });
 
     if (res.status === 200) {
-      const shortUrl = res.json('shortened_url');
-      check(res, { 'shorten: returns shortened_url': () => !!shortUrl });
+      const id = res.json('id');
+      check(res, { 'shorten: returns id': () => id !== undefined && id !== null });
 
-      if (shortUrl) {
-        const expanded = api.expand(shortUrl, 'redirect');
+      if (id !== undefined && id !== null) {
+        const expanded = api.expand(`/expand/${id}`, 'redirect');
         check(expanded, {
-          'expand: status 200': (r) => r.status === 200,
-          'expand: returns original url': (r) => r.json('url') === url,
+          'expand: status 302': (r) => r.status === 302,
+          'expand: Location is original url': (r) => r.headers['Location'] === url,
         });
       }
     }

@@ -47,9 +47,9 @@ export function seedUrls() {
   for (let i = 0; i < dataset.initialUrlCount; i++) {
     const res = api.createShortUrl(undefined, 'shorten_seed');
     if (res.status === 200) {
-      const shortUrl = res.json('shortened_url');
-      if (shortUrl) {
-        created.push(shortUrl);
+      const id = res.json('id');
+      if (id !== undefined && id !== null) {
+        created.push(`/expand/${id}`);
       }
     }
   }
@@ -75,8 +75,8 @@ function doRedirect(pool) {
   const res = api.expand(shortUrl, 'redirect');
 
   const ok = check(res, {
-    'redirect: status 200': (r) => r.status === 200,
-    'redirect: body has url': (r) => r.json('url') !== undefined,
+    'redirect: status 302': (r) => r.status === 302,
+    'redirect: has Location header': (r) => !!r.headers['Location'],
   });
 
   redirectSuccessRate.add(ok);
@@ -90,11 +90,11 @@ function doRedirect(pool) {
 function doCreate() {
   const res = api.createShortUrl(undefined, 'shorten');
 
-  // 200 = created, 409 = duplicate URL — both are valid, non-error outcomes.
+  // A new URL and a duplicate both return 200 (the service returns the existing
+  // row for a duplicate rather than erroring), so 200 is the only success here.
   const ok = check(res, {
-    'shorten: status 200 or 409': (r) => r.status === 200 || r.status === 409,
-    'shorten: returns short url when created': (r) =>
-      r.status !== 200 || r.json('shortened_url') !== undefined,
+    'shorten: status 200': (r) => r.status === 200,
+    'shorten: returns id': (r) => r.json('id') !== undefined,
   });
 
   createSuccessRate.add(ok);

@@ -1,7 +1,7 @@
 // Functional load test — dev sanity under light concurrency (closed model).
 //
 // Ramps a modest number of VUs and exercises every response path
-// (200 / 409 / 404 / 400 / 5xx). Use while developing to confirm correctness
+// (302 / 200 / 404 / 400 / 5xx). Use while developing to confirm correctness
 // holds under some concurrency. For throughput/capacity use the open-model
 // scenarios (baseline/stress/spike/soak/capacity).
 //
