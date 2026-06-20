@@ -21,7 +21,7 @@ public class UrlController {
     private final UrlService urlService;
 
     @GetMapping(path="/all")
-    private List<Url> findAll() {
+    public List<Url> findAll() {
         return urlService.findAll();
     }
 
