@@ -1,10 +1,12 @@
 package com.hussain.urlshortener.service;
 
+import com.hussain.urlshortener.config.CacheConfig;
 import com.hussain.urlshortener.exception.UrlNotFoundException;
 import com.hussain.urlshortener.model.Url;
 import com.hussain.urlshortener.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ public class UrlService {
                 .orElseGet(() -> getOrSaveUrlOnDatabase(url));
     }
 
+    @Cacheable(value = CacheConfig.URLS_CACHE, key = "#id")
     public Url expand(Long id) {
         return urlRepository.findById(id).orElseThrow(UrlNotFoundException::new);
     }
