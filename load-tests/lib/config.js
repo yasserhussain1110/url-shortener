@@ -87,9 +87,14 @@ export const thresholds = {
 //
 // Note: multi-executor scenarios (target.js) call this per executor, so PRE_VUS
 // applies to EACH executor — set it to the per-executor budget, not the total.
+//
+// The heuristic is capped by LOAD_VU_CEILING so a bare `k6 run` from this small
+// (~2GB) load box can't spin up enough VUs to OOM the generator. Raise the
+// ceiling (or PRE_VUS/MAX_VUS) when running from a bigger box.
 export function vuPoolFor(peakRate) {
+  const ceiling = envInt('LOAD_VU_CEILING', 1000);
   return {
-    preAllocatedVUs: envInt('PRE_VUS', Math.max(50, Math.ceil(peakRate * 0.5))),
-    maxVUs: envInt('MAX_VUS', Math.max(200, peakRate * 3)),
+    preAllocatedVUs: envInt('PRE_VUS', Math.min(Math.max(50, Math.ceil(peakRate * 0.5)), ceiling)),
+    maxVUs: envInt('MAX_VUS', Math.min(Math.max(200, peakRate * 3), ceiling)),
   };
 }
