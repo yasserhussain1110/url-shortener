@@ -187,6 +187,8 @@ All overridable with `-e KEY=value`:
 | `WARMUP` | `1m` | target | Ramp-up time before holding at target. |
 | `DURATION` | scenario-specific | smoke / baseline / soak / target | Run duration (hold time for `target`). |
 | `SETUP_TIMEOUT` | `300s` | open-model | Max time for `setup()` to seed the pool. Raise it for big `INITIAL_URL_COUNT`. |
+| `PRE_VUS` | `0.5 × rate` | open-model | Override preallocated VUs. Applies **per executor** (target.js has two). Lower it on small load boxes to avoid OOM. |
+| `MAX_VUS` | `3 × rate` | open-model | Override the VU cap. Caps memory so k6 reports `dropped_iterations` instead of being OOM-killed. |
 
 ```bash
 # Example: capacity test to 2000 RPS against staging with a smaller seed set
