@@ -1,0 +1,95 @@
+// -----------------------------
+// Remote config (Fleet Management)
+// -----------------------------
+// remotecfg {
+//   url            = "https://fleet-management-prod-018.grafana.net"
+//   id             = "ip-172-31-16-196"
+//   poll_frequency = "60s"
+//   attributes     = encoding.from_json(coalesce(``, `{}`))
+//
+//   basic_auth {
+//     username = "1403143"
+//     password = sys.env("GCLOUD_RW_API_KEY")
+//   }
+// }
+
+// -----------------------------
+// Send metrics → Grafana Cloud
+// -----------------------------
+prometheus.remote_write "metrics_service" {
+  endpoint {
+    url = "https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom/push"
+
+    basic_auth {
+      username = "2730521"
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}
+
+// -----------------------------
+// Send logs → Grafana Cloud (Loki)
+// -----------------------------
+loki.write "grafana_cloud_loki" {
+  endpoint {
+    url = "https://logs-prod-028.grafana.net/loki/api/v1/push"
+
+    basic_auth {
+      username = "1360937"
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}
+
+// -----------------------------
+// Spring Boot Actuator Metrics
+// -----------------------------
+prometheus.scrape "url_shortener" {
+  targets = [
+    {
+      __address__ = "localhost:9000",
+      application = "url-shortener",
+      instance    = "localhost:9000",
+    },
+  ]
+
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = "15s"
+
+  forward_to = [
+    prometheus.remote_write.metrics_service.receiver,
+  ]
+}
+
+// -----------------------------
+// Linux Host Metrics
+// (Built-in Node Exporter)
+// -----------------------------
+prometheus.exporter.unix "node" {
+}
+
+prometheus.scrape "node_exporter" {
+  targets = prometheus.exporter.unix.node.targets
+
+  scrape_interval = "15s"
+
+  forward_to = [
+    prometheus.remote_write.metrics_service.receiver,
+  ]
+}
+
+prometheus.scrape "mysql" {
+  targets = [
+    {
+      __address__ = "localhost:9104",
+      application = "mysql",
+      instance = "localhost",
+    },
+  ]
+
+  scrape_interval = "15s"
+
+  forward_to = [
+    prometheus.remote_write.metrics_service.receiver,
+  ]
+}
