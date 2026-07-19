@@ -46,7 +46,9 @@ export function createShortUrlRaw(body, endpoint = 'bad_request') {
 export function expand(shortPath, endpoint = 'redirect') {
   return http.get(`${BASE_URL}${shortPath}`, {
     redirects: 0,
-    tags: { endpoint },
+    // Group all /expand/{id} hits under one series — the id is high-cardinality
+    // and would otherwise create a unique time series per request.
+    tags: { endpoint, name: 'expand/{id}' },
   });
 }
 
@@ -56,7 +58,9 @@ export function expandMissing(endpoint = 'not_found') {
   const id = randomIntBetween(900000000, 999999999);
   return http.get(`${BASE_URL}/expand/${id}`, {
     redirects: 0,
-    tags: { endpoint },
+    // Random id spans a ~100M range; group under one series to avoid a metric
+    // time series per request.
+    tags: { endpoint, name: 'expand/missing' },
   });
 }
 
