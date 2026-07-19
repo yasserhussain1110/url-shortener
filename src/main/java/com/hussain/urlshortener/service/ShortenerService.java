@@ -9,14 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShortenerService {
     private final UrlRepository urlRepository;
 
-    public Url expand(final Long id) {
-        return urlRepository.findById(id).orElseThrow(ResourceNotFoundException::new);
+    public URI expand(final Long id) {
+        return urlRepository.findById(id)
+                .map(Url::getOriginalUrl)
+                .map(URI::create)
+                .orElseThrow(ResourceNotFoundException::new);
     }
 
     public Url shorten(final Url url) {
