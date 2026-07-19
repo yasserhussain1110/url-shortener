@@ -78,12 +78,15 @@ export const thresholds = {
 // Suggested VU pool sizing for an arrival-rate scenario at a given peak RPS.
 // Open-model executors need enough VUs to sustain the rate when latency rises.
 //
-// The heuristic defaults (0.5x peak preallocated, 3x peak cap) suit think-time
-// scenarios (runTraffic sleeps), but they can badly overshoot the RAM available
-// on a modest load box: each VU is a JS runtime plus its own copy of the seed
-// pool (~1MB+), so a large `maxVUs` can OOM the k6 host before the service is
-// even the bottleneck. PRE_VUS / MAX_VUS let you cap the pool to what the box
-// can hold, so k6 reports honest `dropped_iterations` instead of being killed.
+// runTraffic sends one quick request per iteration with NO think-time, so by
+// Little's law the VUs actually needed ≈ peakRate × request_latency (only tens
+// while the service is fast). The 0.5x-preallocated / 3x-cap heuristic is thus
+// generous headroom for latency spikes, not a hard requirement — but a large
+// `maxVUs` still costs RAM (each VU is a JS runtime plus its own copy of the
+// seed pool, ~1MB+), so on a modest load box it can OOM the k6 host before the
+// service is even the bottleneck. PRE_VUS / MAX_VUS let you cap the pool to what
+// the box can hold, so k6 reports honest `dropped_iterations` instead of being
+// killed.
 //
 // Note: multi-executor scenarios (target.js) call this per executor, so PRE_VUS
 // applies to EACH executor — set it to the per-executor budget, not the total.
