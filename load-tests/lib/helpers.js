@@ -20,8 +20,3 @@ export function randomIntBetween(min, max) {
 export function randomUrl() {
   return `https://example.com/${randomString(12)}`;
 }
-
-// Random think-time in seconds, in [0, maxSeconds).
-export function jitter(maxSeconds) {
-  return Math.random() * maxSeconds;
-}
