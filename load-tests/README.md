@@ -10,7 +10,7 @@ directly comparable across runs and load levels.
 load-tests/
 ├── lib/
 │   ├── config.js      # env-driven config + tag-scoped SLO thresholds
-│   ├── helpers.js     # pure helpers (random*)
+│   ├── helpers.js     # pure helpers (random*, jitter)
 │   ├── client.js      # transport: one place that knows the HTTP contract
 │   ├── metrics.js     # shared custom metrics
 │   ├── workload.js    # open-model weighted traffic (seed + runTraffic)
@@ -89,6 +89,11 @@ instance held 10k read + 1k write RPS within SLO. A latency-threshold breach or
   `HOT_URL_PERCENT` (20%) of URLs — Zipf-like production traffic.
 - **Request mix** — `REDIRECT_RATIO` / `CREATE_RATIO` / error remainder
   (default 90% / 8% / 2%).
+- **No think-time** — each iteration is exactly one request with no `sleep()`.
+  In an open (arrival-rate) model the executor sets the rate, so think-time
+  wouldn't change RPS — it would only inflate the VU pool needed
+  (`VUs ≈ rate × latency`) and can starve the generator. Think-time lives only
+  in the closed-model journeys (`smoke` / `functional`).
 
 ## Contract notes (matched to the actual app)
 
@@ -132,6 +137,15 @@ Defined in `lib/config.js`. Two deliberate design choices:
 | `http_req_duration{endpoint:shorten}` | `p95 < 300ms` |
 | `checks` | `rate > 0.99` |
 | `redirect_success_rate` | `rate > 0.99` |
+| `dropped_iterations` | `count == 0` (arrival-rate executor was never starved for a VU) |
+
+The `dropped_iterations` gate makes an under-delivered run fail loudly: an
+arrival-rate executor that can't get a free VU drops the scheduled iteration
+(k6 otherwise only prints a `WARN`), so the run quietly sends fewer RPS than
+asked. A non-zero count means the service can't keep up at this rate **or** the
+VU pool is too small — raise `PRE_VUS` / `MAX_VUS` / `LOAD_VU_CEILING` (and check
+the box has the RAM). Either way you find out instead of trusting a silently
+low result.
 
 - **Latency is asserted via thresholds, not `check()`.** Keeping latency out of
   `check()` means the `checks` rate stays a pure correctness signal and isn't
@@ -187,9 +201,9 @@ All overridable with `-e KEY=value`:
 | `WARMUP` | `1m` | target | Ramp-up time before holding at target. |
 | `DURATION` | scenario-specific | smoke / baseline / soak / target | Run duration (hold time for `target`). |
 | `SETUP_TIMEOUT` | `300s` | open-model | Max time for `setup()` to seed the pool. Raise it for big `INITIAL_URL_COUNT`. |
-| `PRE_VUS` | `0.5 × rate` (capped by `LOAD_VU_CEILING`) | open-model | Override preallocated VUs. Applies **per executor** (target.js has two). Lower it on small load boxes to avoid OOM. |
-| `MAX_VUS` | `3 × rate` (capped by `LOAD_VU_CEILING`) | open-model | Override the VU cap. Caps memory so k6 reports `dropped_iterations` instead of being OOM-killed. |
-| `LOAD_VU_CEILING` | `1000` | open-model | Hard cap applied to the heuristic `PRE_VUS`/`MAX_VUS` defaults, so a bare `k6 run` on a small (~2GB) load box can't allocate enough VUs to OOM the generator. Raise it (or set `PRE_VUS`/`MAX_VUS` explicitly) on a bigger box. Ignored when `PRE_VUS`/`MAX_VUS` are set. |
+| `PRE_VUS` | `0.1 × rate` | open-model | Override preallocated VUs. Applies **per executor** (target.js has two). |
+| `MAX_VUS` | `3 × rate` | open-model | Override the VU cap. Caps memory so k6 reports `dropped_iterations` instead of being OOM-killed. |
+| `LOAD_VU_CEILING` | `500` | open-model | Hard cap on both preallocated and max VUs. Default is sized for a ~2GB load box; raise it on a bigger box or for high-RPS runs (e.g. `target`). |
 
 ```bash
 # Example: capacity test to 2000 RPS against staging with a smaller seed set

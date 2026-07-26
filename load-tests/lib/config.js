@@ -73,31 +73,45 @@ export const thresholds = {
   // Overall correctness of assertions and read availability.
   checks: ['rate>0.99'],
   redirect_success_rate: ['rate>0.99'],
+
+  // Generator honesty. When an arrival-rate executor can't get a free VU for a
+  // scheduled arrival it DROPS the iteration instead of sending it, and k6
+  // otherwise only reports this as a buried WARN — the run then quietly delivers
+  // fewer RPS than configured. Gate on it so a shortfall is a loud, non-zero-exit
+  // failure. A non-zero count means either the service is too slow to keep up at
+  // this rate, or the VU pool is too small (raise PRE_VUS / MAX_VUS /
+  // LOAD_VU_CEILING) — never a silently understated result.
+  dropped_iterations: ['count<1'],
 };
 
 // Suggested VU pool sizing for an arrival-rate scenario at a given peak RPS.
-// Open-model executors need enough VUs to sustain the rate when latency rises.
+// An open-model executor needs a free VU to send each scheduled arrival, so the
+// pool must cover the in-flight concurrency. With no think-time (see
+// workload.js) that concurrency is driven purely by server latency:
+// VUs ≈ rate × request_latency. For a fast redirect (tens of ms) that's a small
+// fraction of the rate, so we preallocate a light 0.1x peak (enough to start a
+// ramp without stalling) and let the pool grow on demand up to a 3x peak cap
+// (headroom for latency up to a few seconds).
 //
-// runTraffic sends one quick request per iteration with NO think-time, so by
-// Little's law the VUs actually needed ≈ peakRate × request_latency (only tens
-// while the service is fast). The 0.5x-preallocated / 3x-cap heuristic is thus
-// generous headroom for latency spikes, not a hard requirement — but a large
-// `maxVUs` still costs RAM (each VU is a JS runtime plus its own copy of the
-// seed pool, ~1MB+), so on a modest load box it can OOM the k6 host before the
-// service is even the bottleneck. PRE_VUS / MAX_VUS let you cap the pool to what
-// the box can hold, so k6 reports honest `dropped_iterations` instead of being
-// killed.
+// Each VU is a JS runtime plus its own copy of the seed pool, so a large pool
+// can OOM a modest load box before the service is the bottleneck. The old
+// 0.5x-peak preallocation was sized for a think-time model and would eagerly
+// reserve e.g. 750 VUs at 1500 RPS — enough to exhaust a ~2GB box at startup.
+// PRE_VUS / MAX_VUS let you pin the pool to what the box can hold; if it's too
+// small for the rate, k6 now fails the gated `dropped_iterations` threshold
+// (see above) instead of silently under-delivering or being OOM-killed.
 //
 // Note: multi-executor scenarios (target.js) call this per executor, so PRE_VUS
 // applies to EACH executor — set it to the per-executor budget, not the total.
 //
-// The heuristic is capped by LOAD_VU_CEILING so a bare `k6 run` from this small
-// (~2GB) load box can't spin up enough VUs to OOM the generator. Raise the
-// ceiling (or PRE_VUS/MAX_VUS) when running from a bigger box.
+// The pool is capped by LOAD_VU_CEILING (default 500, sized for a ~2GB load
+// box) so a bare `k6 run` can't spin up enough VUs to OOM the generator. Raise
+// the ceiling (or PRE_VUS / MAX_VUS) on a bigger box or at high RPS (e.g.
+// target.js at 10k read RPS wants a ceiling well above the 500 default).
 export function vuPoolFor(peakRate) {
-  const ceiling = envInt('LOAD_VU_CEILING', 1000);
+  const ceiling = envInt('LOAD_VU_CEILING', 500);
   return {
-    preAllocatedVUs: envInt('PRE_VUS', Math.min(Math.max(50, Math.ceil(peakRate * 0.5)), ceiling)),
+    preAllocatedVUs: envInt('PRE_VUS', Math.min(Math.max(50, Math.ceil(peakRate * 0.1)), ceiling)),
     maxVUs: envInt('MAX_VUS', Math.min(Math.max(200, peakRate * 3), ceiling)),
   };
 }

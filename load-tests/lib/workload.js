@@ -65,9 +65,10 @@ export function seedUrls() {
 
 // ---------------------------------------------------------------------------
 // Actions: one HTTP request + its assertions + custom metrics, with NO
-// think-time. Exported so throughput-oriented scenarios (e.g. the RPS target)
-// can drive them directly, where the arrival-rate executor — not sleep —
-// controls the rate and per-iteration sleep would only inflate VU needs.
+// think-time. These are the shared building blocks for every open-model
+// scenario — `runTraffic` composes them into a weighted mix, and target.js
+// drives them directly as two independent read/write executors. In all cases
+// the arrival-rate executor (not sleep) controls the rate.
 // ---------------------------------------------------------------------------
 export function redirectAction(pool) {
   const shortUrl = pickWeightedUrl(pool);
@@ -125,13 +126,16 @@ export function errorAction() {
 }
 
 // ---------------------------------------------------------------------------
-// Mixed per-iteration traffic. Exactly one HTTP request per iteration and NO
-// think-time: these scenarios use open-model arrival-rate executors, so the
-// executor controls the request rate directly. A per-iteration sleep would only
-// pin VUs idle and cap achieved throughput below the configured rate, making the
-// scenario label (e.g. "1000 RPS") not match the traffic actually sent.
-// Used by baseline / stress / spike / soak / capacity.
-// (Closed-model, human-paced traffic lives in functional.js instead.)
+// Mixed per-iteration traffic for the open-model arrival-rate scenarios
+// (baseline / stress / spike / soak / capacity). Exactly one request per
+// iteration and NO think-time.
+//
+// Why no sleep: the arrival-rate executor already controls the rate, so a
+// per-iteration sleep does NOT change RPS — it only inflates the VU pool needed
+// (VUs ≈ rate × iteration_time). Think-time would silently starve the generator
+// ("Insufficient VUs, reached N active VUs") long before the service is the
+// bottleneck, understating the RPS actually delivered. Think-time belongs to the
+// closed-model journeys (functional.js), not here.
 // ---------------------------------------------------------------------------
 export function runTraffic(data) {
   const pool = data.redirectPool;
