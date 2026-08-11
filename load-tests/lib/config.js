@@ -19,8 +19,11 @@ export function envStr(name, def) {
   return v === undefined ? def : v;
 }
 
-// Target service.
-export const BASE_URL = envStr('BASE_URL', 'http://localhost:9000');
+// Target service. Defaults to the nginx front on :80 (which reverse-proxies to
+// the app on :9000 and caches /expand) so load tests exercise the real edge
+// path. Point BASE_URL straight at the app (e.g. http://localhost:9000) to
+// bypass nginx.
+export const BASE_URL = envStr('BASE_URL', 'http://localhost:80');
 
 // Max time allowed for setup() to seed the dataset. Seeding is serial (one POST
 // per URL), so the default 5000-URL pool takes ~1-2 min — well past k6's default
