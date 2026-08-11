@@ -12,9 +12,9 @@
 //   - exactly one HTTP request per iteration => configured rate ≈ RPS
 //   - correctness is asserted via check(); latency is asserted via thresholds
 
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import { dataset, mix, errorMix } from './config.js';
-import { randomIntBetween, jitter } from './helpers.js';
+import { randomIntBetween } from './helpers.js';
 import * as api from './client.js';
 import {
   redirectSuccessRate,
@@ -125,8 +125,17 @@ export function errorAction() {
 }
 
 // ---------------------------------------------------------------------------
-// Mixed per-iteration traffic with human-like think-time. One request per
-// iteration. Used by baseline / stress / spike / soak / capacity.
+// Mixed per-iteration traffic for the open-model arrival-rate scenarios
+// (baseline / stress / spike / soak / capacity). Exactly one request per
+// iteration and NO think-time.
+//
+// Why no sleep: the arrival-rate executor already controls the rate, so a
+// per-iteration sleep does NOT change RPS — it only inflates the VU pool needed
+// (VUs ≈ rate × iteration_time). Think-time would silently starve the generator
+// ("Insufficient VUs, reached N active VUs") long before the service is the
+// bottleneck, capping achieved throughput below the configured rate so the
+// scenario label (e.g. "1000 RPS") no longer matches the traffic actually sent.
+// Think-time belongs to the closed-model journeys (functional.js), not here.
 // ---------------------------------------------------------------------------
 export function runTraffic(data) {
   const pool = data.redirectPool;
@@ -134,12 +143,9 @@ export function runTraffic(data) {
 
   if (r < mix.redirect) {
     redirectAction(pool);
-    sleep(jitter(0.5));
   } else if (r < mix.redirect + mix.create) {
     createAction();
-    sleep(jitter(1));
   } else {
     errorAction();
-    sleep(jitter(1));
   }
 }
