@@ -3,7 +3,7 @@
 // disk/log growth. Watch JVM heap + Hikari pool metrics in Grafana over time.
 //
 //   k6 run load-tests/scenarios/soak.js
-//   k6 run -e RATE=150 -e DURATION=2h -e BASE_URL=http://host:9000 load-tests/scenarios/soak.js
+//   k6 run -e RATE=150 -e DURATION=2h -e BASE_URL=http://host load-tests/scenarios/soak.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';

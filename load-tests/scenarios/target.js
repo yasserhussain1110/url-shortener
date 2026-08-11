@@ -14,7 +14,7 @@
 //
 //   k6 run load-tests/scenarios/target.js
 //   k6 run -e READ_RPS=10000 -e WRITE_RPS=1000 -e DURATION=15m \
-//     -e BASE_URL=http://host:9000 load-tests/scenarios/target.js
+//     -e BASE_URL=http://host load-tests/scenarios/target.js
 
 import { seedUrls, redirectAction, createAction } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';

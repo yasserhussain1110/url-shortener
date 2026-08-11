@@ -4,7 +4,7 @@
 // this is the run you diff against after a change to catch regressions.
 //
 //   k6 run load-tests/scenarios/baseline.js
-//   k6 run -e RATE=200 -e DURATION=10m -e BASE_URL=http://host:9000 load-tests/scenarios/baseline.js
+//   k6 run -e RATE=200 -e DURATION=10m -e BASE_URL=http://host load-tests/scenarios/baseline.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, envStr, vuPoolFor } from '../lib/config.js';

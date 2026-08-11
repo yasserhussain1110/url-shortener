@@ -2,7 +2,7 @@
 // (open model). Bridges baseline (100 RPS) and capacity (1000 RPS).
 //
 //   k6 run load-tests/scenarios/stress.js
-//   k6 run -e PEAK=800 -e BASE_URL=http://host:9000 load-tests/scenarios/stress.js
+//   k6 run -e PEAK=800 -e BASE_URL=http://host load-tests/scenarios/stress.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, vuPoolFor } from '../lib/config.js';
