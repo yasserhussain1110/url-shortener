@@ -4,7 +4,7 @@
 // correctness regression. Not a throughput test.
 //
 //   k6 run load-tests/scenarios/smoke.js
-//   k6 run -e BASE_URL=http://host:9000 load-tests/scenarios/smoke.js
+//   k6 run -e BASE_URL=http://host load-tests/scenarios/smoke.js
 
 import { functionalThresholds, runFunctional } from '../lib/functional.js';
 import { envStr } from '../lib/config.js';

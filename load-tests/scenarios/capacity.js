@@ -6,7 +6,7 @@
 // that's the real per-instance capacity signal.
 //
 //   k6 run load-tests/scenarios/capacity.js
-//   k6 run -e PEAK=1000 -e BASE_URL=http://host:9000 load-tests/scenarios/capacity.js
+//   k6 run -e PEAK=1000 -e BASE_URL=http://host load-tests/scenarios/capacity.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, vuPoolFor } from '../lib/config.js';

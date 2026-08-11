@@ -6,7 +6,7 @@
 // scenarios (baseline/stress/spike/soak/capacity).
 //
 //   k6 run load-tests/scenarios/functional.js
-//   k6 run -e BASE_URL=http://host:9000 load-tests/scenarios/functional.js
+//   k6 run -e BASE_URL=http://host load-tests/scenarios/functional.js
 
 import { functionalThresholds, runFunctional } from '../lib/functional.js';
 

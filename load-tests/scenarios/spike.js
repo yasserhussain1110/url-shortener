@@ -3,7 +3,7 @@
 // recovers once the surge passes.
 //
 //   k6 run load-tests/scenarios/spike.js
-//   k6 run -e BASELINE=100 -e PEAK=1500 -e BASE_URL=http://host:9000 load-tests/scenarios/spike.js
+//   k6 run -e BASELINE=100 -e PEAK=1500 -e BASE_URL=http://host load-tests/scenarios/spike.js
 
 import { seedUrls, runTraffic } from '../lib/workload.js';
 import { thresholds, setupTimeout, envInt, vuPoolFor } from '../lib/config.js';
