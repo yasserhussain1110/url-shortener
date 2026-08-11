@@ -1,0 +1,55 @@
+# nginx site config for the url-shortener: reverse proxy to the Spring app on
+# :9000, with an edge cache for the (immutable) /expand redirects.
+#
+# Deploy (Ubuntu):
+#   sudo cp nginx/url-shortener /etc/nginx/sites-available/url-shortener
+#   sudo ln -sf /etc/nginx/sites-available/url-shortener /etc/nginx/sites-enabled/
+#   sudo rm -f /etc/nginx/sites-enabled/default        # drop the default :80 server
+#   sudo mkdir -p /var/cache/nginx/expand              # nginx only creates the LAST
+#   sudo chown -R www-data:www-data /var/cache/nginx   # dir level; parent must exist
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# proxy_cache_path / upstream live in the http{} context (this file is included
+# from http{} via sites-enabled).
+
+# --- http {} block ---
+proxy_cache_path /var/cache/nginx/expand levels=1:2 keys_zone=expand:50m
+                 max_size=500m inactive=24h use_temp_path=off;
+
+upstream app { server 127.0.0.1:9000; keepalive 64; }
+
+server {
+    listen 80;
+    server_name _;
+
+    # Cache the reads (immutable mapping)
+    location /expand/ {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_cache expand;
+        proxy_cache_key      "$uri";        # no query string on /expand/{id}
+        proxy_cache_valid    302  24h;       # redirects are immutable → long TTL
+        proxy_cache_valid    404  10s;       # a missing id may be created later → short
+        proxy_cache_lock     on;             # collapse a burst of misses for one id → 1 upstream call
+        proxy_cache_use_stale error timeout updating;
+        add_header X-Cache-Status $upstream_cache_status;  # HIT/MISS/EXPIRED for verification
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Everything else (writes) — never cached
+    location / {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
