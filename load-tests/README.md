@@ -173,7 +173,7 @@ All overridable with `-e KEY=value`:
 
 | Var | Default | Applies to | Description |
 | --- | --- | --- | --- |
-| `BASE_URL` | `http://localhost:9000` | all | Target service base URL. |
+| `BASE_URL` | `http://localhost:80` | all | Target service base URL. Defaults to the nginx front (`:80`); set to `http://localhost:9000` to hit the app directly. |
 | `INITIAL_URL_COUNT` | `5000` | open-model | Seed URLs created in `setup()`. Lower for quick runs. |
 | `HOT_URL_PERCENT` | `0.2` | open-model | Fraction of pool that is "hot". |
 | `HOT_TRAFFIC_SHARE` | `0.8` | open-model | Fraction of reads hitting the hot subset. |
