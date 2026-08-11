@@ -16,11 +16,29 @@
 proxy_cache_path /var/cache/nginx/expand levels=1:2 keys_zone=expand:50m
                  max_size=500m inactive=24h use_temp_path=off;
 
+# Collapse high-cardinality paths into stable route labels (matches the app's
+# "IO by URI" labels and keeps Loki/LogQL cardinality sane).
+map $uri $route {
+    ~^/expand/   "/expand/{id}";
+    ~^/fault/    "/fault/{code}";
+    default      $uri;
+}
+
+# Space-free key=value pairs so Loki's `| logfmt` parses cleanly. cache is '-' on
+# the uncached write path and HIT/MISS/EXPIRED on /expand; urt (upstream time) is
+# empty on a HIT because nginx never called the app. This is the edge-side view
+# that the app's http_server_requests can't see (cache hits never reach Tomcat).
+log_format edge 'ts=$time_iso8601 status=$status method=$request_method '
+                'route=$route cache=$upstream_cache_status '
+                'rt=$request_time urt=$upstream_response_time';
+
 upstream app { server 127.0.0.1:9000; keepalive 64; }
 
 server {
     listen 80;
     server_name _;
+
+    access_log /var/log/nginx/access.log edge;
 
     # Cache the reads (immutable mapping)
     location /expand/ {
