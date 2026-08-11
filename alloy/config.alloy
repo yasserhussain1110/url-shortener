@@ -43,13 +43,17 @@ loki.write "grafana_cloud_loki" {
 
 // -----------------------------
 // Spring Boot Actuator Metrics
+// Scraped via nginx on :80, which proxies /actuator/prometheus straight through
+// to the app on :9000 (that path is uncached, so metrics are live). These are
+// still the app's own Micrometer counters — the :80 in the label is just where
+// we fetch them, not nginx's own throughput.
 // -----------------------------
 prometheus.scrape "url_shortener" {
   targets = [
     {
-      __address__ = "localhost:9000",
+      __address__ = "localhost:80",
       application = "url-shortener",
-      instance    = "localhost:9000",
+      instance    = "localhost:80",
     },
   ]
 
@@ -92,4 +96,25 @@ prometheus.scrape "mysql" {
   forward_to = [
     prometheus.remote_write.metrics_service.receiver,
   ]
+}
+
+// -----------------------------
+// nginx access log → Loki
+// Ships the edge access log (logfmt: route + upstream_cache_status) so LogQL can
+// chart true edge RPS split by cache HIT/MISS and by route — the read volume the
+// app's http_server_requests can't see, because cache hits never reach the app.
+// route/cache stay in the line (parsed at query time via `| logfmt`) instead of
+// as labels, to keep Loki stream cardinality low.
+// -----------------------------
+local.file_match "nginx" {
+  path_targets = [{
+    __path__ = "/var/log/nginx/access.log",
+    job      = "nginx",
+    instance = "ip-172-31-16-196",
+  }]
+}
+
+loki.source.file "nginx" {
+  targets    = local.file_match.nginx.targets
+  forward_to = [loki.write.grafana_cloud_loki.receiver]
 }
