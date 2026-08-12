@@ -110,7 +110,7 @@ local.file_match "nginx" {
   path_targets = [{
     __path__ = "/var/log/nginx/access.log",
     job      = "nginx",
-    instance = "ip-172-31-16-196",
+    instance = constants.hostname,
   }]
 }
 
