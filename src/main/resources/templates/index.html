@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Zill — a short shadow of a long URL</title>
     <meta name="description" content="Zill (ظل) means shadow. Paste a long URL, take a short one. No account.">
+    <meta name="theme-color" content="#07080b">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Syne:wght@700&display=swap" rel="stylesheet">
@@ -13,7 +16,10 @@
 <body>
 <main class="wrap">
     <header>
-        <div class="brand">Zill</div>
+        <a class="brand-link" href="/" aria-label="Zill home">
+            <img class="brand-mark" src="/favicon.svg" width="28" height="28" alt="">
+            <span class="brand">Zill</span>
+        </a>
         <div class="brand-ar" lang="ar" dir="rtl">ظل</div>
         <div class="meaning">shadow</div>
     </header>

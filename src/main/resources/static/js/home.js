@@ -49,15 +49,43 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // HTTP pages and denied permissions fall through to execCommand.
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } finally {
+    document.body.removeChild(ta);
+  }
+  return ok;
+}
+
 copyBtn.addEventListener("click", async () => {
   const text = shortUrlEl.textContent;
-  try {
-    await navigator.clipboard.writeText(text);
-    copyBtn.textContent = "Copied";
-    setTimeout(() => {
-      copyBtn.textContent = "Copy";
-    }, 1500);
-  } catch {
-    window.prompt("Copy this link:", text);
+  if (!text) {
+    return;
   }
+  const copied = await copyToClipboard(text);
+  if (!copied) {
+    return;
+  }
+  copyBtn.textContent = "Copied";
+  setTimeout(() => {
+    copyBtn.textContent = "Copy";
+  }, 1500);
 });
