@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /expand/
+Disallow: /fault/
+Disallow: /actuator
+
+Sitemap: https://zill.ninja/sitemap.xml

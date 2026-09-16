@@ -3,15 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Zill — a short shadow of a long URL</title>
-    <meta name="description" content="Zill (ظل) means shadow. Paste a long URL, take a short one. No account.">
+    <title>Zill — Free URL Shortener, No Sign-up</title>
+    <meta name="description" content="Zill is a free URL shortener. Paste a long link, get a short one. No account, no tracking wall. Zill (ظل) means shadow — the outline of a long URL.">
+    <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#07080b">
+    <link rel="canonical" href="https://zill.ninja/">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="Zill">
+    <meta property="og:url" content="https://zill.ninja/">
+    <meta property="og:title" content="Zill — Free URL Shortener, No Sign-up">
+    <meta property="og:description" content="Paste a long URL, take a short one. No account. Zill (ظل) means shadow.">
+    <meta property="og:image" content="https://zill.ninja/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Zill — Free URL Shortener, No Sign-up">
+    <meta name="twitter:description" content="Paste a long URL, take a short one. No account.">
+    <meta name="twitter:image" content="https://zill.ninja/og.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Syne:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/home.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "Zill",
+          "alternateName": "ظل",
+          "url": "https://zill.ninja/",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "Any",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "description": "Free URL shortener. Paste a long link and get a short one. No account required."
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is Zill a free URL shortener?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Zill is free to use. Paste a long URL and get a short link. There is no account and no sign-up."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I need an account to shorten a URL?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Open zill.ninja, paste the long URL, and cast it. The same long URL always maps to the same short id."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does Zill shorten links?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Zill stores the original URL and returns a numeric id. Share https://zill.ninja/expand/{id}. Anyone who opens it is redirected to the original address."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
 <main class="wrap">
@@ -23,10 +84,11 @@
         <div class="meaning">shadow</div>
     </header>
 
-    <h1>A long URL.<br>A short shadow.</h1>
-    <p class="lede">Zill is ظل — the outline, not the thing. Paste a link. No account. The original stays behind it.</p>
+    <h1>Free URL shortener.<br>A short shadow.</h1>
+    <p class="lede">Zill is a free URL shortener — ظل, the outline, not the thing. Paste a long link, take a short one. No account. The original stays behind it.</p>
 
     <form class="card" id="shorten-form" novalidate>
+        <label class="sr-only" for="url">Long URL to shorten</label>
         <input id="url" name="url" type="url" placeholder="https://example.com/very/long/path" required autocomplete="off">
         <button type="submit" id="submit">Cast</button>
     </form>
@@ -42,23 +104,39 @@
 
     <section class="steps">
         <article>
-            <h2>Cast</h2>
-            <p>We keep the original and hand you an id. Same link twice returns the same shadow.</p>
+            <h2>Shorten a URL</h2>
+            <p>Paste any https link and cast it. We keep the original and hand you an id. Same link twice returns the same shadow.</p>
         </article>
         <article>
-            <h2>Pass it on</h2>
-            <p>Share this host plus <code>/expand/</code> and that id. That’s the whole short URL.</p>
+            <h2>Share the short link</h2>
+            <p>Your short URL is this site plus <code>/expand/</code> and that id — for example <code>https://zill.ninja/expand/9</code>.</p>
         </article>
         <article>
-            <h2>Step through</h2>
-            <p>Anyone who opens it is sent to the real address. The shadow never was the destination.</p>
+            <h2>Open and go through</h2>
+            <p>Anyone who opens a Zill link is sent to the real address. The shadow never was the destination.</p>
         </article>
     </section>
 
+    <section class="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">FAQ</h2>
+        <details>
+            <summary>Is Zill free?</summary>
+            <p>Yes. Shorten as many URLs as you need. No account, no paid plan on this page.</p>
+        </details>
+        <details>
+            <summary>Do I have to sign up?</summary>
+            <p>No. Paste the long URL and cast. That is the whole product.</p>
+        </details>
+        <details>
+            <summary>What is a Zill short link?</summary>
+            <p>A Zill is <code>https://zill.ninja/expand/</code> plus a number. Opening it redirects to the original URL we stored.</p>
+        </details>
+    </section>
+
     <footer>
-        API <code>POST /shorten</code>
+        <p>Zill — free URL shortener at <a href="https://zill.ninja/">zill.ninja</a>. API <code>POST /shorten</code>
         <code>{"original_url":"https://…"}</code>
-        → <code>GET /expand/{id}</code>
+        → <code>GET /expand/{id}</code></p>
     </footer>
 </main>
 <script src="/js/home.js"></script>
