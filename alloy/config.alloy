@@ -43,17 +43,16 @@ loki.write "grafana_cloud_loki" {
 
 // -----------------------------
 // Spring Boot Actuator Metrics
-// Scraped via nginx on :80, which proxies /actuator/prometheus straight through
-// to the app on :9000 (that path is uncached, so metrics are live). These are
-// still the app's own Micrometer counters — the :80 in the label is just where
-// we fetch them, not nginx's own throughput.
+// Scraped directly from the app on :9000. nginx is HTTPS-only on the edge, so
+// Alloy must not hit :80 (redirect/refuse). /actuator/prometheus is still the
+// app's Micrometer counters — not nginx throughput.
 // -----------------------------
 prometheus.scrape "url_shortener" {
   targets = [
     {
-      __address__ = "localhost:80",
+      __address__ = "localhost:9000",
       application = "url-shortener",
-      instance    = "localhost:80",
+      instance    = "localhost:9000",
     },
   ]
 
