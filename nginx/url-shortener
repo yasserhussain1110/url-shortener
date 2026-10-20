@@ -4,9 +4,9 @@
 # Deploy (Ubuntu):
 #   sudo cp nginx/url-shortener /etc/nginx/sites-available/url-shortener
 #   sudo ln -sf /etc/nginx/sites-available/url-shortener /etc/nginx/sites-enabled/
-#   sudo rm -f /etc/nginx/sites-enabled/default        # drop the default :80 server
-#   sudo mkdir -p /var/cache/nginx/expand              # nginx only creates the LAST
-#   sudo chown -R www-data:www-data /var/cache/nginx   # dir level; parent must exist
+#   sudo rm -f /etc/nginx/sites-enabled/default
+#   sudo mkdir -p /var/cache/nginx/expand
+#   sudo chown -R www-data:www-data /var/cache/nginx
 #   sudo nginx -t && sudo systemctl reload nginx
 #
 # TLS certs are already at /etc/letsencrypt/live/zill.ninja/ (issued by Certbot).
@@ -17,23 +17,22 @@
 proxy_cache_path /var/cache/nginx/expand levels=1:2 keys_zone=expand:50m
                  max_size=500m inactive=24h use_temp_path=off;
 
-# Collapse high-cardinality paths into stable route labels (matches the app's
-# "IO by URI" labels and keeps Loki/LogQL cardinality sane).
+# Collapse high-cardinality paths into stable route labels.
 map $uri $route {
     ~^/expand/   "/expand/{id}";
     ~^/fault/    "/fault/{code}";
     default      $uri;
 }
 
-# Space-free key=value pairs so Loki's `| logfmt` parses cleanly. cache is '-' on
-# the uncached write path and HIT/MISS/EXPIRED on /expand; urt (upstream time) is
-# empty on a HIT because nginx never called the app. This is the edge-side view
-# that the app's http_server_requests can't see (cache hits never reach Tomcat).
+# Space-free key=value pairs for Loki's | logfmt parser.
 log_format edge 'ts=$time_iso8601 status=$status method=$request_method '
                 'route=$route cache=$upstream_cache_status '
                 'rt=$request_time urt=$upstream_response_time';
 
-upstream app { server 127.0.0.1:9000; keepalive 64; }
+upstream app {
+    server 127.0.0.1:9000;
+    keepalive 64;
+}
 
 server {
     listen 80;
@@ -59,34 +58,35 @@ server {
 
     access_log /var/log/nginx/access.log edge;
 
-    # Cache the reads (immutable mapping)
+    # Cache immutable redirect lookups.
     location /expand/ {
         proxy_pass http://app;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
 
         proxy_cache expand;
-        proxy_cache_key      "$uri";        # no query string on /expand/{id}
-        proxy_cache_valid    302  24h;       # redirects are immutable → long TTL
-        proxy_cache_valid    404  10s;       # a missing id may be created later → short
-        proxy_cache_lock     on;             # collapse a burst of misses for one id → 1 upstream call
+        proxy_cache_key "$uri";
+        proxy_cache_valid 302 24h;
+        proxy_cache_valid 404 10s;
+        proxy_cache_lock on;
         proxy_cache_use_stale error timeout updating;
-        add_header X-Cache-Status $upstream_cache_status;  # HIT/MISS/EXPIRED for verification
+        add_header X-Cache-Status $upstream_cache_status;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     }
 
-    # Everything else (writes) — never cached
+    # All other requests, including writes, are not cached.
     location / {
         proxy_pass http://app;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
+
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     }
 }
