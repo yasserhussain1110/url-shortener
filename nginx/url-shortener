@@ -1,19 +1,14 @@
-# nginx site config for the url-shortener: reverse proxy to the Spring app on
-# :9000, with an edge cache for the (immutable) /expand redirects.
+# URL shortener: Nginx reverse proxy to Spring Boot on port 9000.
+# HTTPS terminates at the Hetzner Load Balancer, which forwards to this
+# server over HTTP on port 80.
 #
-# Deploy (Ubuntu):
-#   sudo cp nginx/url-shortener /etc/nginx/sites-available/url-shortener
-#   sudo ln -sf /etc/nginx/sites-available/url-shortener /etc/nginx/sites-enabled/
-#   sudo rm -f /etc/nginx/sites-enabled/default
+# Deploy:
 #   sudo mkdir -p /var/cache/nginx/expand
 #   sudo chown -R www-data:www-data /var/cache/nginx
+#   sudo ln -sfn /etc/nginx/sites-available/url-shortener /etc/nginx/sites-enabled/url-shortener
+#   sudo rm -f /etc/nginx/sites-enabled/default
 #   sudo nginx -t && sudo systemctl reload nginx
-#
-# TLS certs are already at /etc/letsencrypt/live/zill.ninja/ (issued by Certbot).
-# Renewals stay on Certbot's timer; this file only points nginx at those files.
-# Open security-group inbound 80 and 443.
 
-# --- http {} block ---
 proxy_cache_path /var/cache/nginx/expand levels=1:2 keys_zone=expand:50m
                  max_size=500m inactive=24h use_temp_path=off;
 
@@ -24,7 +19,7 @@ map $uri $route {
     default      $uri;
 }
 
-# Space-free key=value pairs for Loki's | logfmt parser.
+# Space-free key=value pairs for Loki's logfmt parser.
 log_format edge 'ts=$time_iso8601 status=$status method=$request_method '
                 'route=$route cache=$upstream_cache_status '
                 'rt=$request_time urt=$upstream_response_time';
@@ -36,25 +31,7 @@ upstream app {
 
 server {
     listen 80;
-    server_name zill.ninja www.zill.ninja;
-
-    # Let Certbot renew over HTTP-01 before the HTTPS redirect.
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-server {
-    listen 443 ssl http2;
-    server_name zill.ninja www.zill.ninja;
-
-    ssl_certificate     /etc/letsencrypt/live/zill.ninja/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/zill.ninja/privkey.pem;
-    ssl_protocols       TLSv1.2 TLSv1.3;
+    server_name _;
 
     access_log /var/log/nginx/access.log edge;
 
@@ -75,10 +52,10 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto https;
     }
 
-    # All other requests, including writes, are not cached.
+    # All other requests, including writes, are never cached.
     location / {
         proxy_pass http://app;
         proxy_http_version 1.1;
@@ -87,6 +64,6 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto https;
     }
 }
