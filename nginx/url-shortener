@@ -1,13 +1,16 @@
-# URL shortener: Nginx reverse proxy to Spring Boot on port 9000.
-# HTTPS terminates at the Hetzner Load Balancer, which forwards to this
-# server over HTTP on port 80.
+# nginx site config for the URL shortener.
+# Reverse proxy to Spring Boot on :9000, with an edge cache for /expand redirects.
 #
-# Deploy:
-#   sudo mkdir -p /var/cache/nginx/expand
-#   sudo chown -R www-data:www-data /var/cache/nginx
+# Deploy from the project root:
+#   sudo cp nginx/url-shortener /etc/nginx/sites-available/url-shortener
 #   sudo ln -sfn /etc/nginx/sites-available/url-shortener /etc/nginx/sites-enabled/url-shortener
 #   sudo rm -f /etc/nginx/sites-enabled/default
+#   sudo mkdir -p /var/cache/nginx/expand
+#   sudo chown -R www-data:www-data /var/cache/nginx
 #   sudo nginx -t && sudo systemctl reload nginx
+#
+# HTTPS terminates at the Hetzner Load Balancer, which forwards traffic to
+# this server over HTTP on port 80. Do not add an HTTPS redirect here.
 
 proxy_cache_path /var/cache/nginx/expand levels=1:2 keys_zone=expand:50m
                  max_size=500m inactive=24h use_temp_path=off;
