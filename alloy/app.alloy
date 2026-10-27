@@ -41,5 +41,20 @@ local.file_match "nginx" {
 
 loki.source.file "nginx" {
   targets    = local.file_match.nginx.targets
+  forward_to = [loki.process.nginx.receiver]
+}
+
+// Stamp each line with the request time (ts=) instead of the time Alloy read
+// it; otherwise backlog catch-up bunches lines into fake RPS spikes.
+loki.process "nginx" {
+  stage.logfmt {
+    mapping = { "ts" = "" }
+  }
+
+  stage.timestamp {
+    source = "ts"
+    format = "RFC3339"
+  }
+
   forward_to = [loki.write.grafana_cloud_loki.receiver]
 }
