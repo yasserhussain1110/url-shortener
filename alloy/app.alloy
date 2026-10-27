@@ -1,0 +1,45 @@
+// App servers only (nginx + Spring Boot). Requires common.alloy.
+
+// -----------------------------
+// Spring Boot Actuator Metrics
+// Scraped directly from the app on :9000. /actuator/prometheus is the app's
+// Micrometer counters — not nginx throughput (cache hits never reach the app).
+// instance = hostname so the two app servers stay distinguishable.
+// -----------------------------
+prometheus.scrape "url_shortener" {
+  targets = [
+    {
+      __address__ = "localhost:9000",
+      application = "url-shortener",
+      instance    = constants.hostname,
+    },
+  ]
+
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = "15s"
+
+  forward_to = [
+    prometheus.remote_write.metrics_service.receiver,
+  ]
+}
+
+// -----------------------------
+// nginx access log → Loki
+// Ships the edge access log (logfmt: route + upstream_cache_status) so LogQL can
+// chart true edge RPS split by cache HIT/MISS and by route — the read volume the
+// app's http_server_requests can't see, because cache hits never reach the app.
+// route/cache stay in the line (parsed at query time via `| logfmt`) instead of
+// as labels, to keep Loki stream cardinality low.
+// -----------------------------
+local.file_match "nginx" {
+  path_targets = [{
+    __path__ = "/var/log/nginx/access.log",
+    job      = "nginx",
+    instance = constants.hostname,
+  }]
+}
+
+loki.source.file "nginx" {
+  targets    = local.file_match.nginx.targets
+  forward_to = [loki.write.grafana_cloud_loki.receiver]
+}

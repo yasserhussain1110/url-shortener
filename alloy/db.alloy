@@ -1,0 +1,17 @@
+// MySQL box only. Requires common.alloy.
+// MYSQL_EXPORTER_DSN comes from /etc/default/alloy, e.g.
+//   MYSQL_EXPORTER_DSN="exporter:<password>@(localhost:3306)/"
+
+prometheus.exporter.mysql "db" {
+  data_source_name = sys.env("MYSQL_EXPORTER_DSN")
+}
+
+prometheus.scrape "mysql" {
+  targets = prometheus.exporter.mysql.db.targets
+
+  scrape_interval = "15s"
+
+  forward_to = [
+    prometheus.remote_write.metrics_service.receiver,
+  ]
+}
